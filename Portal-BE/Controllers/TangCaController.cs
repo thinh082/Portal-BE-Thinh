@@ -161,7 +161,6 @@ namespace Portal_BE.Controllers
 
             var list = await _context.TangCas
                 .Include(t => t.IdNhanVienNavigation)
-                .Where(t => t.NgayTangCa == today)
                 .OrderByDescending(t => t.Id)
                 .Select(t => new
                 {
@@ -181,7 +180,7 @@ namespace Portal_BE.Controllers
         }
 
         [HttpPost("status-ot")]
-        public async Task<IActionResult> StatusOT([FromBody] int id)
+        public async Task<IActionResult> StatusOT([FromBody] UpdateStatusOtDto request)
         {
             long userId = GetCurrentUserId();
             if (userId == 0) return Unauthorized(new { statusCode = 401, message = "Chưa đăng nhập" });
@@ -212,16 +211,26 @@ namespace Portal_BE.Controllers
                 return Unauthorized(new { statusCode = 403, message = "Bạn không có quyền duyệt tăng ca" });
             }
 
-            var tangCa = await _context.TangCas.FindAsync(id);
+            var tangCa = await _context.TangCas.FindAsync(request.Id);
             if (tangCa == null)
             {
                 return Ok(new { statusCode = 404, message = "Không tìm thấy yêu cầu tăng ca" });
             }
-            tangCa.TrangThai = "Duyệt";
+
+            // 验证状态值
+            var validStatuses = new[] { "Chờ duyệt", "Duyệt", "Đã duyệt", "Từ chối" };
+            if (!string.IsNullOrEmpty(request.TrangThai) && validStatuses.Contains(request.TrangThai))
+            {
+                tangCa.TrangThai = request.TrangThai;
+            }
+            else
+            {
+                return Ok(new { statusCode = 400, message = "Trạng thái không hợp lệ" });
+            }
             
             await _context.SaveChangesAsync();
 
-            return Ok(new { statusCode = 200, message = "Đã duyệt yêu cầu tăng ca" });
+            return Ok(new { statusCode = 200, message = "Cập nhật trạng thái thành công" });
         }
 
         public class RequestOtDto
@@ -231,6 +240,12 @@ namespace Portal_BE.Controllers
             public double? SoGioLam { get; set; }
             public double? HeSo { get; set; }
             public string? LyDoTangCa { get; set; }
+        }
+
+        public class UpdateStatusOtDto
+        {
+            public int Id { get; set; }
+            public string? TrangThai { get; set; }
         }
     }
 }
