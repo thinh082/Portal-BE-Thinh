@@ -369,8 +369,8 @@ namespace Portal_BE.Controllers
         public class AddOTDto
         {
             public long? IdNhanVien { get; set; }
-            public TimeOnly? GioBatDau { get; set; }
-            public TimeOnly? GioKetThuc { get; set; }
+            public string? GioBatDau { get; set; }
+            public string? GioKetThuc { get; set; }
             public double? SoGioLam { get; set; }
             public double? HeSo { get; set; }
             public string? LyDoTangCa { get; set; }
