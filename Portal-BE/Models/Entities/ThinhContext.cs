@@ -277,6 +277,8 @@ public partial class ThinhContext : DbContext
 
             entity.ToTable("TangCa");
 
+            entity.Property(e => e.GioBatDau).HasMaxLength(10);
+            entity.Property(e => e.GioKetThuc).HasMaxLength(10);
             entity.Property(e => e.LyDoTangCa).HasMaxLength(255);
             entity.Property(e => e.NgayTangCa).HasColumnType("datetime");
             entity.Property(e => e.SoGioLam).HasColumnName("soGioLam");
