@@ -184,6 +184,33 @@ namespace Portal_BE.Controllers
                 return Unauthorized(new { statusCode = 401, message = "Không có quyền thêm nhân viên" });
             }
 
+            // --- BƯỚC SỬA: Lấy ID của Vai Trò mặc định (ví dụ: "NhanVien") ---
+            // Lưu ý: Thay "NhanVien" bằng tên chính xác trong DB của bạn hoặc hardcode ID nếu bạn biết chắc chắn (ví dụ: 2)
+            var defaultRole = await _context.VaiTros.FirstOrDefaultAsync(r => r.TenVaiTro == "NhanVien");
+
+            if (defaultRole == null)
+            {
+                return BadRequest(new { statusCode = 400, message = "Lỗi hệ thống: Chưa cấu hình vai trò Nhân viên trong CSDL" });
+            }
+
+            var taiKhoan = new TaiKhoan
+            {
+                TenDangNhap = Guid.NewGuid().ToString().Substring(0, 5),
+                MatKhau = "123456",
+                Email = request.Email,
+                SoDienThoai = request.SoDienThoai,
+                SoNamKinhNghiem = request.SoNamKinhNghiem,
+                MoTaKyNang = request.MoTaKyNang,
+
+                // --- BỔ SUNG DÒNG NÀY ---
+                IdVaiTro = defaultRole.Id // Gán khóa ngoại trỏ tới bảng VaiTro
+            };
+
+            _context.TaiKhoans.Add(taiKhoan);
+
+            // Bây giờ SaveChanges sẽ không bị lỗi nữa vì đã có IdVaiTro hợp lệ
+            await _context.SaveChangesAsync();
+
             var nv = new NhanVien
             {
                 HoTen = request.HoTen,
@@ -195,7 +222,7 @@ namespace Portal_BE.Controllers
                 ChucVu = request.ChucVu,
                 LuongCoBan = request.LuongCoBan,
                 IdPhongBan = request.IdPhongBan,
-                IdTaiKhoan = request.IdTaiKhoan 
+                IdTaiKhoan = taiKhoan.Id
             };
 
             _context.NhanViens.Add(nv);
@@ -248,21 +275,26 @@ namespace Portal_BE.Controllers
                 nv.LuongCoBan = request.LuongCoBan ?? nv.LuongCoBan;
                 nv.IdPhongBan = request.IdPhongBan ?? nv.IdPhongBan;
                 
-                // Also update contact info if provided
+                // Also update contact info and career info if provided
                 if (nv.IdTaiKhoanNavigation != null)
                 {
                     nv.IdTaiKhoanNavigation.Email = request.Email ?? nv.IdTaiKhoanNavigation.Email;
                     nv.IdTaiKhoanNavigation.SoDienThoai = request.SoDienThoai ?? nv.IdTaiKhoanNavigation.SoDienThoai;
+                    nv.IdTaiKhoanNavigation.SoNamKinhNghiem = request.SoNamKinhNghiem ?? nv.IdTaiKhoanNavigation.SoNamKinhNghiem;
+                    nv.IdTaiKhoanNavigation.MoTaKyNang = request.MoTaKyNang ?? nv.IdTaiKhoanNavigation.MoTaKyNang;
                 }
             }
             else
             {
-                // Employee can only update Address, Phone, Email
+                // Employee can only update Address, Phone, Email, Experience, Skills
                 nv.DiaChi = request.DiaChi ?? nv.DiaChi;
                 if (nv.IdTaiKhoanNavigation != null)
                 {
                     nv.IdTaiKhoanNavigation.Email = request.Email ?? nv.IdTaiKhoanNavigation.Email;
                     nv.IdTaiKhoanNavigation.SoDienThoai = request.SoDienThoai ?? nv.IdTaiKhoanNavigation.SoDienThoai;
+                    nv.IdTaiKhoanNavigation.SoNamKinhNghiem = request.SoNamKinhNghiem ?? nv.IdTaiKhoanNavigation.SoNamKinhNghiem;
+                    nv.IdTaiKhoanNavigation.MoTaKyNang = request.MoTaKyNang ?? nv.IdTaiKhoanNavigation.MoTaKyNang;
+                    _context.NhanViens.Update(nv);
                 }
             }
 
@@ -343,6 +375,10 @@ namespace Portal_BE.Controllers
             public decimal? LuongCoBan { get; set; }
             public long? IdPhongBan { get; set; }
             public long? IdTaiKhoan { get; set; }
+            public string? Email { get; set; }
+            public string? SoDienThoai { get; set; }
+            public int? SoNamKinhNghiem { get; set; }
+            public string? MoTaKyNang { get; set; }
         }
 
         public class UpdateNhanVienRequest
@@ -359,6 +395,8 @@ namespace Portal_BE.Controllers
             public long? IdPhongBan { get; set; }
             public string? Email { get; set; }
             public string? SoDienThoai { get; set; }
+            public int? SoNamKinhNghiem { get; set; }
+            public string? MoTaKyNang { get; set; }
         }
 
         public class DeleteRequest

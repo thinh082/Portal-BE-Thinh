@@ -507,14 +507,47 @@ namespace Portal_BE.Controllers
 
                         // Try to detect header row (look for "Nhân viên" or "Tên" or "Employee" in first row)
                         int startRow = 2; // Default start from row 2
+                        bool hasHeader = false;
                         var firstRowValue = worksheet.Cells[1, 2]?.Value?.ToString()?.ToLower() ?? "";
                         if (firstRowValue.Contains("nhân viên") || firstRowValue.Contains("tên") || firstRowValue.Contains("employee") || firstRowValue.Contains("stt"))
                         {
                             startRow = 2; // Row 1 is header
+                            hasHeader = true;
                         }
                         else
                         {
                             startRow = 1; // No header, start from row 1
+                            hasHeader = false;
+                        }
+                        
+                        // Detect STT column: check header row or first data row
+                        int colOffset = 0;
+                        if (hasHeader)
+                        {
+                            // Check header row: if column 1 contains "STT" or "Số thứ tự", then we have STT column
+                            var headerCol1 = worksheet.Cells[1, 1]?.Value?.ToString()?.ToLower() ?? "";
+                            if (headerCol1.Contains("stt") || headerCol1.Contains("số thứ tự") || headerCol1.Contains("số tt"))
+                            {
+                                colOffset = 1; // First column is STT
+                            }
+                            else
+                            {
+                                // Check first data row: if column 1 is a number, it's likely STT
+                                var firstDataCell = worksheet.Cells[startRow, 1]?.Value?.ToString()?.Trim();
+                                if (!string.IsNullOrWhiteSpace(firstDataCell) && int.TryParse(firstDataCell, out _))
+                                {
+                                    colOffset = 1; // First column is STT
+                                }
+                            }
+                        }
+                        else
+                        {
+                            // No header: check first row if column 1 is a number
+                            var firstDataCell = worksheet.Cells[startRow, 1]?.Value?.ToString()?.Trim();
+                            if (!string.IsNullOrWhiteSpace(firstDataCell) && int.TryParse(firstDataCell, out _))
+                            {
+                                colOffset = 1; // First column is STT
+                            }
                         }
                         
                         int maxRow = worksheet.Dimension?.End.Row ?? 0;
@@ -523,14 +556,7 @@ namespace Portal_BE.Controllers
                         {
                             try
                             {
-                                // Read data from Excel
-                                // Try to detect column structure: check if first column is STT (number)
-                                int colOffset = 0;
-                                var firstCell = worksheet.Cells[row, 1]?.Value?.ToString()?.Trim();
-                                if (row > startRow && !string.IsNullOrWhiteSpace(firstCell) && int.TryParse(firstCell, out _))
-                                {
-                                    colOffset = 1; // First column is STT, offset by 1
-                                }
+                                // Read data from Excel using detected colOffset
                                 
                                 var nhanVienName = worksheet.Cells[row, 1 + colOffset]?.Value?.ToString()?.Trim();
                                 var thangStr = worksheet.Cells[row, 2 + colOffset]?.Value?.ToString()?.Trim();
